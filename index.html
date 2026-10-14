@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Train Fever — 20-Minute Rule &amp; Tractive-Effort Route Calculator</title>
+<meta name="description" content="Check whether a planned Train Fever line clears the game's 20-minute passenger rule, and whether a locomotive can pull your train up a route's steepest grade — enter your own numbers, see the computed result.">
+<style>
+  :root {
+    --bg: #11131a;
+    --panel: #181c26;
+    --panel-border: #2d3342;
+    --ink: #e4e7ee;
+    --ink-dim: #9099ad;
+    --accent: #4f7fa8;
+    --accent-bright: #7fb3dd;
+    --field-bg: #0c0e13;
+    --warn: #c2874f;
+    --bad: #c2574f;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.55;
+  }
+  main {
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 32px 20px 80px;
+  }
+  h1 {
+    font-size: 1.4rem;
+    margin: 0 0 4px;
+    border-bottom: 1px solid var(--panel-border);
+    padding-bottom: 16px;
+  }
+  .sub {
+    color: var(--ink-dim);
+    font-size: 0.93rem;
+    margin: 0 0 28px;
+  }
+  .sub a { color: var(--accent-bright); }
+  .assumption-box {
+    background: rgba(79, 127, 168, 0.12);
+    border: 1px solid var(--accent);
+    border-radius: 4px;
+    padding: 12px 14px;
+    font-size: 0.85rem;
+    margin: 0 0 16px;
+  }
+  .assumption-box .label {
+    color: var(--accent-bright);
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.72rem;
+    letter-spacing: 0.03em;
+    display: block;
+    margin-bottom: 4px;
+  }
+  section {
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: 6px;
+    padding: 20px 22px;
+    margin-bottom: 20px;
+  }
+  section h2 {
+    font-size: 1.1rem;
+    margin: 0 0 6px;
+  }
+  .section-note {
+    color: var(--ink-dim);
+    font-size: 0.85rem;
+    margin: 0 0 16px;
+  }
+  .field-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 14px;
+    margin-bottom: 14px;
+  }
+  .field {
+    display: flex;
+    flex-direction: column;
+  }
+  label.field-label {
+    font-size: 0.85rem;
+    color: var(--ink-dim);
+    margin-bottom: 6px;
+  }
+  label.field-label .hint {
+    color: var(--warn);
+    font-size: 0.75rem;
+  }
+  input[type="number"] {
+    width: 100%;
+    background: var(--field-bg);
+    color: var(--ink);
+    border: 1px solid var(--panel-border);
+    border-radius: 4px;
+    padding: 9px 10px;
+    font-size: 1rem;
+  }
+  input[type="number"]:focus {
+    outline: 1px solid var(--accent);
+  }
+  .output-box {
+    border-top: 1px solid var(--panel-border);
+    margin-top: 6px;
+    padding-top: 14px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 10px;
+  }
+  .output-cell {
+    background: var(--field-bg);
+    border: 1px solid var(--panel-border);
+    border-radius: 4px;
+    padding: 10px 12px;
+  }
+  .output-cell .output-label {
+    font-size: 0.78rem;
+    color: var(--ink-dim);
+    display: block;
+    margin-bottom: 3px;
+  }
+  .output-cell .output-value {
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: var(--accent-bright);
+  }
+  .output-cell .output-value.bad { color: var(--bad); }
+  .output-cell .output-sub {
+    font-size: 0.75rem;
+    color: var(--ink-dim);
+    display: block;
+    margin-top: 3px;
+  }
+  .sources-section {
+    font-size: 0.82rem;
+    color: var(--ink-dim);
+  }
+  .sources-section h2 { font-size: 1.05rem; }
+  .sources-section ol { margin: 6px 0 16px; padding-left: 22px; }
+  .sources-section li { margin-bottom: 8px; }
+  .sources-section a { color: var(--accent-bright); }
+  .sources-section .verified { color: var(--ink); font-weight: 600; }
+  .sources-section code {
+    background: var(--field-bg);
+    border-radius: 3px;
+    padding: 1px 5px;
+  }
+  .self-test { font-size: 0.75rem; color: var(--ink-dim); margin-top: 10px; }
+  .self-test.ok { color: var(--accent-bright); }
+  .self-test.bad { color: var(--warn); }
+  footer {
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 0 20px 40px;
+    font-size: 0.8rem;
+    color: var(--ink-dim);
+  }
+  footer a { color: var(--accent-bright); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Train Fever — 20-Minute Rule &amp; Tractive-Effort Route Calculator</h1>
+  <p class="sub">Two independent checks for a route you are planning in
+  <a href="https://store.steampowered.com/app/304730" target="_blank" rel="noopener">Train Fever</a>:
+  whether the trip clears the game's 20-minute passenger rule, and whether your locomotive has
+  enough pull for the steepest grade on the route. Enter your own numbers — the math runs in your
+  browser, nothing is saved or sent anywhere.</p>
+
+  <section>
+    <h2>20-Minute Rule checker</h2>
+    <p class="section-note">Enter the station-to-station distance, the vehicle's top speed, and the
+    line's frequency (minutes between departures) from your own line manager.</p>
+    <div class="assumption-box">
+      <span class="label">Assumption this tool makes, not a game-documented number</span>
+      Average wait time is estimated as <code>frequency ÷ 2</code> — the standard queueing
+      approximation for a passenger arriving at a random time between departures. The game itself
+      does not publish a wait-time formula; this is this tool's own approximation, applied on top
+      of the sourced 20-minute threshold (see Sources below).
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label class="field-label" for="distanceKm">Station-to-station distance (km)</label>
+        <input type="number" id="distanceKm" min="0" step="0.1" value="10">
+      </div>
+      <div class="field">
+        <label class="field-label" for="topSpeedKmh">Vehicle top speed (km/h)</label>
+        <input type="number" id="topSpeedKmh" min="1" step="1" value="60">
+      </div>
+      <div class="field">
+        <label class="field-label" for="frequencyMin">Line frequency (minutes between departures)</label>
+        <input type="number" id="frequencyMin" min="0" step="0.5" value="10">
+      </div>
+    </div>
+    <div class="output-box" id="ruleOutputBox"></div>
+  </section>
+
+  <section>
+    <h2>Tractive-effort / grade-climb estimator</h2>
+    <p class="section-note">Standard real-world locomotive physics, not a game-specific constant
+    (see Sources). Enter your locomotive's tractive effort rating, your total train weight, and the
+    steepest gradient on the route. No specific in-game locomotive's numbers are hardcoded here —
+    read your own values off the game's purchase/vehicle screen and enter them below.</p>
+    <div class="field-row">
+      <div class="field">
+        <label class="field-label" for="availableKN">Locomotive tractive effort (kN)</label>
+        <input type="number" id="availableKN" min="0" step="1" value="300">
+      </div>
+      <div class="field">
+        <label class="field-label" for="trainWeightTonnes">Total train weight (tonnes)</label>
+        <input type="number" id="trainWeightTonnes" min="0" step="1" value="500">
+      </div>
+      <div class="field">
+        <label class="field-label" for="gradientPercent">Steepest gradient on the route (%)</label>
+        <input type="number" id="gradientPercent" min="0" step="0.1" value="1.0">
+      </div>
+    </div>
+    <div class="output-box" id="gradeOutputBox"></div>
+  </section>
+
+  <section class="sources-section">
+    <h2>Sources &amp; last verified date</h2>
+    <p class="verified">All claims below fetched directly 2026-10-14. No "best locomotive" or
+    "optimal route" verdict is given anywhere on this page — only the computed numbers.</p>
+    <ol>
+      <li><strong>20-minute rule, existence and definition</strong> — corroborated by two
+      independently-fetched Steam Community discussion threads (tt-forums.net's own Train Fever
+      threads returned an anti-bot challenge page on direct fetch and could not be read this
+      session; see README for the exact attempt). First:
+      <a href="https://steamcommunity.com/app/304730/discussions/0/3800525308873794060" target="_blank" rel="noopener">Train Fever discussion #3800525308873794060</a>
+      — "the 20 minute timers counts travel to stations, waiting, transit, unloading and then travel
+      to the source of the demand. All that needs to be under 20 minutes or [the trip] breaks,"
+      with the same post stating "the same principle applies for passengers routes." Second:
+      <a href="https://steamcommunity.com/app/446800/discussions/0/1471967615881291513" target="_blank" rel="noopener">Transport Fever discussion #1471967615881291513</a>
+      — "In Train Fever the 20 minute rule had no bearing on people and goods that were already in
+      transit. The game estimates the time it takes to go places and if it estimates it to take
+      longer than the allowed time it simply does not make the trip in the first place," and
+      separately confirms the rule was removed (not merely patched) in the sequel, Transport Fever —
+      which is why this tool is scoped to Train Fever only.</li>
+      <li><strong>Average-wait approximation (frequency ÷ 2):</strong> this tool's own choice, not
+      sourced to the game — stated explicitly above and not treated as a corroborated game fact.</li>
+      <li><strong>Tractive-effort / grade-resistance formula:</strong> public-domain railway
+      engineering, not a Train Fever constant, so no in-game vehicle numbers are hardcoded.
+      Corroborated by two independent sources stating the same figure in different units:
+      <a href="https://www.republiclocomotive.com/locomotive-power-calculations/" target="_blank" rel="noopener">republiclocomotive.com/locomotive-power-calculations</a>
+      — "For every ton of train weight in a grade, 20 pounds of tractive effort is needed for each
+      1% of slope" — and a second independent source stating the metric equivalent, "20 pounds or 9
+      kilograms of tractive effort... for every ton of weight times every percent of grade." Both
+      reduce to the same physics this page implements: required force = weight × <var>g</var> ×
+      (grade% ÷ 100), with <var>g</var> = 9.80665 m/s² (sin θ ≈ grade fraction for the small angles
+      used as track gradients). This page states explicitly that it omits rolling, aerodynamic and
+      curve resistance — a simplification, not an unsourced extra term.</li>
+    </ol>
+    <p class="self-test" id="selfTest">running self-test…</p>
+  </section>
+</main>
+
+<footer>
+  Fan-made calculator, unaffiliated with Urban Games. Figures above reflect the sources cited,
+  fetched 2026-10-14, and may not match every patch — verify against your own game's line manager
+  and vehicle screens before relying on a number. No account, no server, no data leaves your
+  browser.
+</footer>
+
+<script src="calc.js"></script>
+<script>
+(function () {
+  "use strict";
+  var C = window.TFCALC;
+
+  function num(id) {
+    var el = document.getElementById(id);
+    var v = parseFloat(el.value);
+    return isNaN(v) ? 0 : v;
+  }
+
+  function cell(label, value, sub, bad) {
+    var div = document.createElement("div");
+    div.className = "output-cell";
+    var l = document.createElement("span");
+    l.className = "output-label";
+    l.textContent = label;
+    var v = document.createElement("span");
+    v.className = "output-value" + (bad ? " bad" : "");
+    v.textContent = value;
+    div.appendChild(l);
+    div.appendChild(v);
+    if (sub) {
+      var s = document.createElement("span");
+      s.className = "output-sub";
+      s.textContent = sub;
+      div.appendChild(s);
+    }
+    return div;
+  }
+
+  function renderRule() {
+    var distanceKm = num("distanceKm");
+    var topSpeedKmh = num("topSpeedKmh") || 1;
+    var frequencyMin = num("frequencyMin");
+
+    var r = C.checkTwentyMinuteRule({ distanceKm: distanceKm, topSpeedKmh: topSpeedKmh, frequencyMin: frequencyMin });
+
+    var box = document.getElementById("ruleOutputBox");
+    box.innerHTML = "";
+    box.appendChild(cell("Travel time", r.travelMinutes.toFixed(1) + " min", "distance ÷ top speed"));
+    box.appendChild(cell("Average wait (frequency ÷ 2)", r.avgWaitMinutes.toFixed(1) + " min", "this tool's approximation — see box above"));
+    box.appendChild(cell("Total trip time", r.totalMinutes.toFixed(1) + " min", "travel + average wait"));
+    box.appendChild(cell(
+      r.clears ? "Clears the 20-minute rule" : "Exceeds the 20-minute rule",
+      (r.clears ? "+" : "") + r.marginMinutes.toFixed(1) + " min margin",
+      r.clears ? "trip total is at or under the 20-minute threshold" : "passengers are not expected to take this trip",
+      !r.clears
+    ));
+  }
+
+  function renderGrade() {
+    var availableKN = num("availableKN");
+    var trainWeightTonnes = num("trainWeightTonnes");
+    var gradientPercent = num("gradientPercent");
+
+    var r = C.tractiveEffortCheck({ availableKN: availableKN, trainWeightTonnes: trainWeightTonnes, gradientPercent: gradientPercent });
+
+    var box = document.getElementById("gradeOutputBox");
+    box.innerHTML = "";
+    box.appendChild(cell("Tractive effort required", r.requiredKN.toFixed(1) + " kN", "weight × g × grade ÷ 100 — grade resistance only, see Sources"));
+    box.appendChild(cell("Tractive effort available", availableKN.toFixed(1) + " kN", "as entered above"));
+    box.appendChild(cell(
+      r.canClimb ? "Can climb this grade" : "Cannot climb this grade",
+      (r.canClimb ? "+" : "") + r.marginKN.toFixed(1) + " kN margin",
+      r.canClimb ? "available tractive effort exceeds what the grade requires" : "available tractive effort is short of what the grade requires",
+      !r.canClimb
+    ));
+  }
+
+  ["distanceKm", "topSpeedKmh", "frequencyMin"].forEach(function (id) {
+    document.getElementById(id).addEventListener("input", renderRule);
+  });
+  ["availableKN", "trainWeightTonnes", "gradientPercent"].forEach(function (id) {
+    document.getElementById(id).addEventListener("input", renderGrade);
+  });
+
+  renderRule();
+  renderGrade();
+
+  // In-page mirror of the five headless known-answer tests in test.js, so opening the file
+  // directly also proves the math without a terminal.
+  (function selfTest() {
+    var el = document.getElementById("selfTest");
+    var pass = 0, total = 5;
+    var a = C.checkTwentyMinuteRule({ distanceKm: 10, topSpeedKmh: 60, frequencyMin: 10 });
+    if (Math.abs(a.totalMinutes - 15) < 0.001 && a.clears === true) pass++;
+    var b = C.checkTwentyMinuteRule({ distanceKm: 15, topSpeedKmh: 50, frequencyMin: 12 });
+    if (Math.abs(b.totalMinutes - 24) < 0.001 && b.clears === false) pass++;
+    var c = C.checkTwentyMinuteRule({ distanceKm: 8, topSpeedKmh: 80, frequencyMin: 20 });
+    if (Math.abs(c.totalMinutes - 16) < 0.001 && c.clears === true) pass++;
+    var d = C.tractiveEffortCheck({ availableKN: 300, trainWeightTonnes: 500, gradientPercent: 1.0 });
+    if (Math.abs(d.requiredKN - 49.03325) < 0.001 && d.canClimb === true) pass++;
+    var e = C.tractiveEffortCheck({ availableKN: 150, trainWeightTonnes: 2000, gradientPercent: 2.5 });
+    if (Math.abs(e.requiredKN - 490.3325) < 0.001 && e.canClimb === false) pass++;
+    el.textContent = "self-test: " + pass + "/" + total + " known-answer scenarios passed";
+    el.className = "self-test " + (pass === total ? "ok" : "bad");
+  })();
+})();
+</script>
+</body>
+</html>
